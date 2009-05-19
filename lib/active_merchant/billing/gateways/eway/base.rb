@@ -51,7 +51,7 @@ module ActiveMerchant #:nodoc:
         def driver(eway_customer_id, username, password)
           @driver ||= SOAP::WSDLDriverFactory.new(wdsl).create_rpc_driver
           @driver.default_encodingstyle = SOAP::EncodingStyle::ASPDotNetHandler.new
-          #@driver.wiredump_dev = STDERR
+          @driver.wiredump_dev = STDERR
           @driver.generate_explicit_type = true
           @driver.headerhandler << header(eway_customer_id, username, password)
           @driver

@@ -5,6 +5,7 @@ gem 'soap4r'
 require 'rexml/document'
 require File.dirname(__FILE__) + '/eway/rebill'
 require File.dirname(__FILE__) + '/eway/managed'
+require File.dirname(__FILE__) + '/eway/direct_debit'
 
 module ActiveMerchant #:nodoc:
   module Billing #:nodoc:
@@ -138,6 +139,7 @@ module ActiveMerchant #:nodoc:
 
       include ActiveMerchant::Billing::EwayRebill 
       include ActiveMerchant::Billing::EwayManaged
+      include ActiveMerchant::Billing::EwayDirectDebit
       
       self.money_format = :cents
       self.supported_countries = ['AU']
@@ -201,6 +203,8 @@ module ActiveMerchant #:nodoc:
       def query_customer(customer_id)
         if options[:engine] == :managed
           EwayManaged::Customer.query(customer_id, options)
+        elsif options[:engine] == :direct_debit
+          EwayDirectDebit::Customer.query(customer_id, options)
         end
       end
 

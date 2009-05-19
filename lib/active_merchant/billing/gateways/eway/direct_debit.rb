@@ -7,17 +7,17 @@ module ActiveMerchant #:nodoc:
     module EwayDirectDebit
       class ProxyBase < EwayBase::Proxy
         def wdsl
-          "https://www.eway.com.au/gateway/ManagedPaymentService/test/DirectDebit.asmx?WSDL"
+          "https://www.eway.com.au/gateway/directdebit/test/directdebit.asmx?WSDL"
         end
 
         def header(eway_customer_id, username, password)
-          EwayManagedHeader.new(eway_customer_id, username, password)
+          EwayDirectDebitHeader.new(eway_customer_id, username, password)
         end
       end
  
-      class EwayManagedHeader < SOAP::Header::SimpleHandler
+      class EwayDirectDebitHeader < SOAP::Header::SimpleHandler
         def initialize(eway_customer_id, username, password)
-          super(XSD::QName.new('https://www.eway.com.au/gateway/DirectDebit', 'eWAYHeader'))
+          super(XSD::QName.new('https://www.eway.com.au/gateway/directdebit', 'eWAYHeader'))
           @item = { :eWAYCustomerID => eway_customer_id, :Username => username, :Password => password }
         end
 
@@ -30,17 +30,9 @@ module ActiveMerchant #:nodoc:
         attr_accessor :options
 
         def initialize(attributes = {}, options = {})
-          self.fields = [ :id, :ref, :title, :first_name, :last_name, :company, :job_desc, :email, :address, :suburb, :state, :post_code, :country, :phone, :mobile, :fax, :url, :comments ]
+          self.fields = [ :id, :ref, :title, :firstname, :lastname, :company, :position, :email, :address, :suburb, :state, :postcode, :country, :phone_number, :mobile_number, :fax_number, :web_site, :customer_reference, :comments, :form_send_method ]
           self.options = options
           super(attributes)
-        end
-
-        def credit_card
-          @credit_card
-        end
-
-        def credit_card=(credit_card)
-          @credit_card = credit_card
         end
 
         def save(options = {})
@@ -63,10 +55,7 @@ module ActiveMerchant #:nodoc:
         end
 
         def create(options = {})
-          self.credit_card.require_verification_value = false
           raise ActiveRecord::RecordInvalid.new(self) unless self.valid?
-          raise ActiveRecord::RecordInvalid.new(self.credit_card) unless self.credit_card.valid?
-          self.credit_card.year = self.credit_card.year.to_s[2..3]
 
           options = self.options.merge(options)
           res = driver(options[:login], options[:username], options[:password]).CreateCustomer(prepared_attributes).createCustomerResult
@@ -74,10 +63,7 @@ module ActiveMerchant #:nodoc:
         end
 
         def update(options = {})
-          self.credit_card.require_verification_value = false
           raise ActiveRecord::RecordInvalid.new(self) unless self.valid?
-          raise ActiveRecord::RecordInvalid.new(self.credit_card) unless self.credit_card.valid?
-          self.credit_card.year = self.credit_card.year.to_s[2..3]
           
           options = self.options.merge(options)
           res = driver(options[:login], options[:username], options[:password]).UpdateCustomer(prepared_attributes).updateCustomerResult
@@ -86,14 +72,14 @@ module ActiveMerchant #:nodoc:
 
         def self.query(id, options = {})
           proxy = ProxyBase.new
-          response = proxy.driver(options[:login], options[:username], options[:password]).QueryCustomer(:managedCustomerID => id).queryCustomerResult
+          response = proxy.driver(options[:login], options[:username], options[:password]).QueryCustomer(:CustomerID => id).queryCustomerResponse
            
           customer = Customer.new({}, options)
           
           customer.fields.each do |field|
             case(field)
             when :id
-              camel_key = "managedCustomerID"
+              camel_key = "directDebitCustomerID"
             when :url
               camel_key = "customerURL"
             when :phone
@@ -105,15 +91,6 @@ module ActiveMerchant #:nodoc:
             end
             customer.send("#{field.to_s}=", response.send(camel_key))
           end
-
-          ccName = response.cCName.split(' ')
-          customer.credit_card = ActiveMerchant::Billing::CreditCard.new(
-            :number => response.cCNumber,
-            :month => response.cCExpiryMonth,
-            :year => response.cCExpiryYear,
-            :first_name => ccName.shift,
-            :last_name => ccName.join(' ')
-          )
 
           customer
         end
@@ -143,12 +120,6 @@ module ActiveMerchant #:nodoc:
           end
           tmp["Title"] = "Mr."
           tmp["Country"] = "au"
-          
-          # Now go through the Credit Card object
-          tmp['CCNumber'] = self.credit_card.number
-          tmp['CCNameOnCard'] = self.credit_card.first_name + " " + self.credit_card.last_name
-          tmp['CCExpiryMonth'] = self.credit_card.month
-          tmp['CCExpiryYear'] = self.credit_card.year
           
           tmp
         end
