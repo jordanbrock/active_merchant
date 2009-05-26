@@ -30,7 +30,7 @@ module ActiveMerchant #:nodoc:
         attr_accessor :options
 
         def initialize(attributes = {}, options = {})
-          self.fields = [ :id, :ref, :title, :firstname, :lastname, :company, :position, :email, :address, :suburb, :state, :postcode, :country, :phone_number, :mobile_number, :fax_number, :web_site, :customer_reference, :comments, :form_send_method ]
+          self.fields = [ :id, :customer_reference, :title, :first_name, :last_name, :company_name, :position, :email, :address, :suburb, :state, :post_code, :country, :phone_number, :mobile_number, :fax_number, :web_site, :comments, :managed_customer_id ]
           self.options = options
           super(attributes)
         end
@@ -72,6 +72,7 @@ module ActiveMerchant #:nodoc:
 
         def self.query(id, options = {})
           proxy = ProxyBase.new
+          debugger
           response = proxy.driver(options[:login], options[:username], options[:password]).QueryCustomer(:CustomerID => id).queryCustomerResponse
            
           customer = Customer.new({}, options)
